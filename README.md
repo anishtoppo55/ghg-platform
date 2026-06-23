@@ -4,6 +4,16 @@ A prototype GHG Protocol-aligned reporting platform: tracks Scope 1 & 2 emission
 applies versioned emission factors with historical accuracy, and exposes analytics
 (YoY, intensity, hotspot) powering a single-page dashboard.
 
+Access the deployed application here:
+
+👉 https://apu-forecast-192u.onrender.com
+
+> Note: The app may take 30–60 seconds to load on first visit due to cold start (Render free tier).
+
+> [!WARNING]
+> Due to cold start the audit log will be lost.
+
+
 ## 1. Architecture
 
 ```
