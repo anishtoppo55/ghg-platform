@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>GHG Emissions Reporting Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f3f1fb;
+    --card: #ffffff;
+    --ink: #1f1b2e;
+    --muted: #8b87a3;
+    --border: #ececf5;
+    --purple: #8b6df0;
+    --purple-light: #ede8fd;
+    --pink: #f4c6e0;
+    --pink-light: #fdeaf3;
+    --green: #c7f0a6;
+    --green-dark: #5fae2e;
+    --yellow: #fbe79b;
+    --teal: #5fd0c2;
+    --radius: 18px;
+    --shadow: 0 4px 18px rgba(80, 60, 150, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .app { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 76px;
+    background: #ffffff;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 26px;
+  }
+  .sidebar .logo {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--ink); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .sidebar .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 18px; cursor: default;
+  }
+  .sidebar .icon-btn.active { background: var(--ink); color: white; }
+
+  /* Main */
+  .main { flex: 1; padding: 28px 32px; max-width: 1500px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 26px; flex-wrap: wrap; gap: 14px;
+  }
+  .topbar h1 { font-size: 22px; margin: 0; font-weight: 700; }
+  .topbar .right { display: flex; align-items: center; gap: 12px; }
+  .pill {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; color: var(--muted);
+  }
+  .status-dot { font-size: 12px; color: var(--muted); }
+
+  .tabs-row { display: flex; gap: 26px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .tabs-row .tab {
+    padding-bottom: 12px; font-size: 13px; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent; font-weight: 600;
+  }
+  .tabs-row .tab.active { color: var(--ink); border-bottom-color: var(--purple); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+  }
+  .card h2 {
+    font-size: 14px; font-weight: 700; margin: 0 0 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card h2 .dots { color: var(--muted); font-weight: 400; }
+
+  .span-2 { grid-column: span 2; }
+  .span-4 { grid-column: span 4; }
+
+  /* KPI cards */
+  .kpi { display: flex; flex-direction: column; gap: 6px; }
+  .kpi .label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .kpi .value { font-size: 22px; font-weight: 700; }
+  .kpi .sub { font-size: 11px; color: var(--muted); }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; margin-top: 6px;
+  }
+  .badge.up { background: var(--green); color: var(--green-dark); }
+  .kpi-dark { background: var(--ink); color: white; }
+  .kpi-dark .label { color: #c9c4e0; }
+  .kpi-dark .badge { background: var(--pink-light); color: #c2317e; }
+
+  /* form */
+  label { font-size: 12px; color: var(--muted); display: block; margin: 12px 0 5px; font-weight: 600; }
+  input, select {
+    width: 100%; padding: 10px 12px; background: #faf9fd;
+    border: 1px solid var(--border); border-radius: 10px;
+    color: var(--ink); font-size: 13px;
+  }
+  select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 13px) calc(50% - 3px);
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  button.primary {
+    margin-top: 16px; width: 100%; padding: 11px; background: var(--ink);
+    border: none; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; font-size: 13px;
+  }
+  button.primary:hover { background: var(--purple); }
+  .status { font-size: 12px; margin-top: 8px; min-height: 16px; font-weight: 600; }
+  .status.ok { color: var(--green-dark); }
+  .status.err { color: #d6437a; }
+  .seg { display: flex; gap: 6px; margin-bottom: 14px; background: #faf9fd; padding: 4px; border-radius: 10px; }
+  .seg button { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; margin: 0; }
+  .seg button.active { background: var(--ink); color: white; }
+  form.hidden { display: none; }
+
+  canvas { max-height: 230px; }
+  table.audit { width: 100%; font-size: 12px; border-collapse: collapse; }
+  table.audit th { text-align: left; padding: 8px 6px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  table.audit td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
+
+  @media (max-width: 1100px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .span-2, .span-4 { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="sidebar">
+    <div class="logo">G</div>
+    <div class="icon-btn active">▦</div>
+    <div class="icon-btn">⛁</div>
+    <div class="icon-btn">◈</div>
+    <div class="icon-btn">🗑</div>
+    <div class="icon-btn">⏚</div>
+    <div class="icon-btn">▥</div>
+    <div class="icon-btn">⚙</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>Carbon Emissions Dashboard</h1>
+      <div class="right">
+        <span class="pill" id="apiStatus">connecting…</span>
+        <span class="pill">FY 2024 · Central Steel Plant</span>
+      </div>
+    </div>
+
+    <div class="tabs-row">
+      <div class="tab active">Overview</div>
+      <div class="tab">Scope 1</div>
+      <div class="tab">Scope 2</div>
+      <div class="tab">Submit Data</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- Submit form card -->
+      <div class="card span-2">
+        <h2>Submit Data <span class="dots">⋯</span></h2>
+        <div class="seg">
+          <button id="tabEmission" class="active" onclick="switchTab('emission')">Emission Record</button>
+          <button id="tabMetric" onclick="switchTab('metric')">Business Metric</button>
+        </div>
+
+        <form id="emissionForm">
+          <label>Scope</label>
+          <select id="scope" onchange="loadActivityTypes()">
+            <option value="1">Scope 1 — Direct</option>
+            <option value="2">Scope 2 — Indirect</option>
+          </select>
+
+          <label>Activity Type</label>
+          <select id="activity_type" onchange="autoFillUnit()" required>
+            <option value="">Loading…</option>
+          </select>
+
+          <label>Activity Data (quantity)</label>
+          <input id="activity_data" type="number" step="any" required />
+
+          <label>Unit</label>
+          <input id="unit" readonly />
+
+          <label>Activity Date</label>
+          <input id="activity_date" type="date" required />
+
+          <label>Facility</label>
+          <input id="facility" value="Central Steel Plant" />
+
+          <button class="primary" type="submit">Submit Emission Record</button>
+          <div id="emissionStatus" class="status"></div>
+        </form>
+
+        <form id="metricForm" class="hidden">
+          <label>Date</label>
+          <input id="m_date" type="date" required />
+          <label>Metric Name</label>
+          <select id="m_name">
+            <option value="Tons of Steel Produced">Tons of Steel Produced</option>
+            <option value="Employee Headcount">Employee Headcount</option>
+            <option value="Total Energy Consumed (kWh)">Total Energy Consumed (kWh)</option>
+          </select>
+          <label>Value</label>
+          <input id="m_value" type="number" step="any" required />
+          <label>Facility</label>
+          <input id="m_facility" value="Central Steel Plant" />
+          <button class="primary" type="submit">Submit Business Metric</button>
+          <div id="metricStatus" class="status"></div>
+        </form>
+      </div>
+
+      <!-- Hotspot donut -->
+      <div class="card">
+        <h2>Emission Hotspot <span class="dots">⋯</span></h2>
+        <canvas id="hotspotChart"></canvas>
+      </div>
+
+      <!-- Override -->
+      <div class="card">
+        <h2>Manual Override <span class="dots">⋯</span></h2>
+        <label>Emission Record ID</label>
+        <input id="ov_id" type="number" placeholder="e.g. 12" />
+        <label>New Value (tCO2e)</label>
+        <input id="ov_value" type="number" step="any" />
+        <label>Reason</label>
+        <input id="ov_reason" placeholder="e.g. corrected meter reading" />
+        <button class="primary" onclick="submitOverride()">Apply Override</button>
+        <div id="overrideStatus" class="status"></div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="card kpi kpi-dark">
+        <div class="label">Emission Intensity</div>
+        <div class="value" id="intensityValue">—</div>
+        <div class="sub">kgCO₂e / ton of steel, 2024</div>
+        <span class="badge">Live</span>
+      </div>
+      <div class="card kpi">
+        <div class="label">Scope 1 — 2024</div>
+        <div class="value" id="scope1Value">—</div>
+        <div class="sub">tCO2e total</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Scope 2 — 2024</div>
+        <div class="value" id="scope2Value">—</div>
+        <div class="sub">tCO2e total</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">YoY Change (Scope 1+2)</div>
+        <div class="value" id="yoyChangeValue">—</div>
+        <span class="badge up" id="yoyBadge">—</span>
+      </div>
+
+      <!-- YoY stacked bar -->
+      <div class="card span-2">
+        <h2>YoY Emissions by Scope <span class="dots">⋯</span></h2>
+        <canvas id="yoyChart"></canvas>
+      </div>
+
+      <!-- Monthly trend -->
+      <div class="card span-2">
+        <h2>Monthly Emissions Trend — 2024 <span class="dots">⋯</span></h2>
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <!-- Audit log -->
+      <div class="card span-4">
+        <h2>Audit Log — Manual Overrides <span class="dots">⋯</span></h2>
+        <table class="audit" id="auditTable">
+          <thead><tr><th>Record ID</th><th>Field</th><th>Old</th><th>New</th><th>Reason</th><th>By</th><th>When</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function switchTab(tab) {
+  document.getElementById('emissionForm').classList.toggle('hidden', tab !== 'emission');
+  document.getElementById('metricForm').classList.toggle('hidden', tab !== 'metric');
+  document.getElementById('tabEmission').classList.toggle('active', tab === 'emission');
+  document.getElementById('tabMetric').classList.toggle('active', tab === 'metric');
+}
+
+let activityTypeUnits = {};
+
+async function loadActivityTypes() {
+  const scope = document.getElementById('scope').value;
+  const select = document.getElementById('activity_type');
+  select.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const data = await (await fetch(`${API}/api/activity-types?scope=${scope}`)).json();
+    activityTypeUnits = {};
+    select.innerHTML = '<option value="">Select an activity type…</option>' +
+      data.map(d => {
+        activityTypeUnits[d.activity_type] = d.unit;
+        return `<option value="${d.activity_type}">${d.activity_type}</option>`;
+      }).join('');
+  } catch (e) {
+    select.innerHTML = '<option value="">Failed to load</option>';
+  }
+}
+
+function autoFillUnit() {
+  const activityType = document.getElementById('activity_type').value;
+  document.getElementById('unit').value = activityTypeUnits[activityType] || '';
+}
+
+async function checkApi() {
+  try {
+    const r = await fetch(API + '/api/emission-factors');
+    document.getElementById('apiStatus').textContent = r.ok ? '🟢 API connected' : '🔴 API error';
+  } catch (e) {
+    document.getElementById('apiStatus').textContent = '🔴 API unreachable';
+  }
+}
+
+document.getElementById('emissionForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    scope: parseInt(document.getElementById('scope').value),
+    activity_type: document.getElementById('activity_type').value,
+    activity_data: parseFloat(document.getElementById('activity_data').value),
+    unit: document.getElementById('unit').value,
+    activity_date: document.getElementById('activity_date').value,
+    facility: document.getElementById('facility').value,
+  };
+  const statusEl = document.getElementById('emissionStatus');
+  if (!body.activity_type) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please select an activity type';
+    return;
+  }
+  try {
+    const r = await fetch(API + '/api/emissions', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (r.ok) {
+      statusEl.className = 'status ok';
+      statusEl.textContent = `Saved (id=${data.id}). Calculated: ${data.calculated_emissions.toFixed(4)} tCO2e`;
+      loadDashboard();
+    } else {
+      statusEl.className = 'status err';
+      statusEl.textContent = data.detail || 'Error';
+    }
+  } catch (err) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Request failed: ' + err.message;
+  }
+});
+
+document.getElementById('metricForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    date: document.getElementById('m_date').value,
+    metric_name: document.getElementById('m_name').value,
+    value: parseFloat(document.getElementById('m_value').value),
+    facility: document.getElementById('m_facility').value,
+  };
+  const statusEl = document.getElementById('metricStatus');
+  try {
+    const r = await fetch(API + '/api/business-metrics', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    statusEl.className = r.ok ? 'status ok' : 'status err';
+    statusEl.textContent = r.ok ? `Saved (id=${data.id})` : (data.detail || 'Error');
+    if (r.ok) loadDashboard();
+  } catch (err) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Request failed: ' + err.message;
+  }
+});
+
+async function submitOverride() {
+  const id = document.getElementById('ov_id').value;
+  const statusEl = document.getElementById('overrideStatus');
+  if (!id) { statusEl.className='status err'; statusEl.textContent='Enter a record ID'; return; }
+  const body = {
+    new_value: parseFloat(document.getElementById('ov_value').value),
+    reason: document.getElementById('ov_reason').value,
+    changed_by: 'dashboard_user',
+  };
+  try {
+    const r = await fetch(`${API}/api/emissions/${id}/override`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    statusEl.className = r.ok ? 'status ok' : 'status err';
+    statusEl.textContent = r.ok ? 'Override applied & logged' : (data.detail || 'Error');
+    if (r.ok) loadAuditLog();
+  } catch (err) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Request failed: ' + err.message;
+  }
+}
+
+let yoyChart, hotspotChart, trendChart;
+const PALETTE = ['#8b6df0', '#f4a6cf', '#5fd0c2', '#fbe79b', '#c7f0a6', '#a78bfa', '#f0a6d9', '#7dd3c8'];
+
+async function loadDashboard() {
+  const yoy = await (await fetch(API + '/api/analytics/yoy?current_year=2024')).json();
+  const years = Object.keys(yoy).sort();
+  const ctx1 = document.getElementById('yoyChart');
+  if (yoyChart) yoyChart.destroy();
+  yoyChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [
+        { label: 'Scope 1', data: years.map(y => yoy[y].scope1), backgroundColor: '#8b6df0', borderRadius: 6 },
+        { label: 'Scope 2', data: years.map(y => yoy[y].scope2), backgroundColor: '#f4a6cf', borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: '#ececf5' } } },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+  });
+
+  const s1 = yoy['2024'].scope1, s2 = yoy['2024'].scope2;
+  document.getElementById('scope1Value').textContent = Math.round(s1).toLocaleString();
+  document.getElementById('scope2Value').textContent = Math.round(s2).toLocaleString();
+  const total24 = s1 + s2, total23 = yoy['2023'].scope1 + yoy['2023'].scope2;
+  const change = total23 ? (((total24 - total23) / total23) * 100).toFixed(1) : 0;
+  document.getElementById('yoyChangeValue').textContent = (change > 0 ? '+' : '') + change + '%';
+  const badge = document.getElementById('yoyBadge');
+  badge.textContent = change > 0 ? '↑ vs 2023' : '↓ vs 2023';
+  badge.className = 'badge ' + (change > 0 ? 'up' : 'up');
+
+  const hotspot = await (await fetch(API + '/api/analytics/hotspot?year=2024')).json();
+  const top = hotspot.breakdown.slice(0, 8);
+  const ctx2 = document.getElementById('hotspotChart');
+  if (hotspotChart) hotspotChart.destroy();
+  hotspotChart = new Chart(ctx2, {
+    type: 'doughnut',
+    data: { labels: top.map(b => b.source), datasets: [{ data: top.map(b => b.emissions_tco2e), backgroundColor: PALETTE, borderWidth: 0 }] },
+    options: { responsive: true, cutout: '65%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  const intensity = await (await fetch(API + '/api/analytics/intensity?year=2024')).json();
+  document.getElementById('intensityValue').textContent = intensity.intensity_kgco2e_per_ton
+    ? intensity.intensity_kgco2e_per_ton.toLocaleString() : '—';
+
+  const trend = await (await fetch(API + '/api/analytics/monthly-trend?year=2024')).json();
+  const ctx3 = document.getElementById('trendChart');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx3, {
+    type: 'line',
+    data: { labels: trend.map(t => 'M' + t.month), datasets: [{ label: 'tCO2e', data: trend.map(t => t.emissions_tco2e), borderColor: '#8b6df0', backgroundColor: 'rgba(139,109,240,0.12)', fill: true, tension: 0.35, pointRadius: 3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#ececf5' } }, x: { grid: { display: false } } } }
+  });
+
+  loadAuditLog();
+}
+
+async function loadAuditLog() {
+  const logs = await (await fetch(API + '/api/audit-log')).json();
+  const tbody = document.querySelector('#auditTable tbody');
+  tbody.innerHTML = logs.slice(0, 15).map(l => `
+    <tr>
+      <td>${l.record_id}</td><td>${l.field_changed}</td>
+      <td>${parseFloat(l.old_value).toFixed(2)}</td><td>${parseFloat(l.new_value).toFixed(2)}</td>
+      <td>${l.reason || ''}</td><td>${l.changed_by}</td><td>${l.changed_at}</td>
+    </tr>`).join('');
+}
+
+checkApi();
+loadActivityTypes();
+loadDashboard();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  ghg-platform:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ghg_data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  ghg_data:
